@@ -31,6 +31,33 @@ static int test_keys(void)
   return 0;
 }
 
+static int test_keys_with_recovery(void)
+{
+  uint8_t pk[CRYPTO_PUBLICKEYBYTES];
+  uint8_t sk[CRYPTO_SECRETKEYBYTES];
+  uint8_t ct[CRYPTO_CIPHERTEXTBYTES];
+  uint8_t key_a[CRYPTO_BYTES];
+  uint8_t key_b[CRYPTO_BYTES];
+  uint8_t seed[KYBER_SYMBYTES];
+  
+  //Alice generates a public key with seeds
+  randombytes(seed, KYBER_SYMBYTES);
+  crypto_kem_keypair_with_recovery(pk, sk, seed);
+
+  //Bob derives a secret key and creates a response
+  crypto_kem_enc(ct, key_b, pk);
+
+  //Alice uses Bobs response to get her shared key
+  crypto_kem_dec(key_a, ct, sk);
+
+  if(memcmp(key_a, key_b, CRYPTO_BYTES)) {
+    printf("ERROR keys\n");
+    return 1;
+  }
+
+  return 0;
+}
+
 static int test_invalid_sk_a(void)
 {
   uint8_t pk[CRYPTO_PUBLICKEYBYTES];
@@ -101,6 +128,7 @@ int main(void)
 
   for(i=0;i<NTESTS;i++) {
     r  = test_keys();
+    r |= test_keys_with_recovery();
     r |= test_invalid_sk_a();
     r |= test_invalid_ciphertext();
     if(r)
